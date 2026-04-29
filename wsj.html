@@ -471,7 +471,7 @@
         <a href="#" class="logo">唯是君</a>
         <ul class="nav-links" id="navLinks">
             <li><a href="#home">首页</a></li>
-            <!-- 修改点：作品链接改为跳转到独立的作品页面 -->
+            <!-- 修改点：作品链接指向 works.html，不再使用锚点 -->
             <li><a href="works.html">作品</a></li>
             <li><a href="#about">关于</a></li>
             <li><a href="#contact">联系</a></li>
@@ -492,8 +492,24 @@
         <div class="scroll-indicator"><span></span></div>
     </section>
 
-    <!-- 作品集区域已从首页移除，将迁移至 works.html -->
-    <!-- 首页的其他区块保留，例如关于、联系等 -->
+    <!-- 作品集（保留，可通过首页滚动访问，但导航已不直接跳转此处） -->
+    <section id="portfolio">
+        <h2 class="section-title fade-in">作品集</h2>
+        <div class="gallery-grid" id="galleryGrid">
+            <!-- 系列卡片，数据由 JS 动态生成 -->
+        </div>
+    </section>
+
+    <!-- 灯箱 -->
+    <div class="lightbox" id="lightbox">
+        <button class="close-btn" id="closeLightbox">&#10005;</button>
+        <button class="nav-btn prev-btn" id="prevBtn">&#8249;</button>
+        <button class="nav-btn next-btn" id="nextBtn">&#8250;</button>
+        <img src="" alt="作品展示" id="lightboxImg">
+        <span class="counter" id="lightboxCounter"></span>
+    </div>
+
+    <!-- 关于 -->
     <section id="about">
         <h2 class="section-title fade-in">关于我</h2>
         <div class="about-wrapper">
@@ -513,6 +529,7 @@
         </div>
     </section>
 
+    <!-- 联系 -->
     <section id="contact">
         <h2 class="section-title fade-in">联系 / 约拍</h2>
         <div class="contact-info fade-in">
@@ -528,6 +545,130 @@
     </footer>
 
     <script>
+        // ========== 作品数据 ==========
+        // 每个系列包含：封面缩略图、系列名、photos数组（大图URL）
+        const seriesData = [
+            {
+                name: '城市边缘',
+                cover: 'https://lxy-xuxue.github.io/Myintroduction/DSC_0978.jpg',
+                photos: [
+                    'https://lxy-xuxue.github.io/Myintroduction/DSC_0978.jpg',
+                    
+                ]
+            },
+            {
+                name: '山中四季',
+                cover: 'https://lxy-xuxue.github.io/Myintroduction/DSC_0966.jpg',
+                photos: [
+                    'https://lxy-xuxue.github.io/Myintroduction/DSC_0966.jpg',
+                    
+                ]
+            },
+            {
+                name: '光影练习',
+                cover: 'https://lxy-xuxue.github.io/Myintroduction/DSC_0887.jpg',
+                photos: [
+                    'https://lxy-xuxue.github.io/Myintroduction/DSC_0887.jpg',
+                    
+                ]
+            }
+        ];
+
+        // ========== 渲染作品集网格 ==========
+        const galleryGrid = document.getElementById('galleryGrid');
+        let allPhotosFlat = []; // 用于灯箱全局浏览
+
+        seriesData.forEach((series, seriesIndex) => {
+            // 创建系列封面卡片
+            const item = document.createElement('div');
+            item.className = 'gallery-item fade-in';
+            item.innerHTML = `
+                <img src="${series.cover}" alt="${series.name}" loading="lazy">
+                <div class="overlay">
+                    <span class="series-name">${series.name}</span>
+                    <span class="photo-count">${series.photos.length} 张</span>
+                </div>
+            `;
+            // 点击封面打开该系列第一张图
+            item.addEventListener('click', () => {
+                openLightbox(seriesIndex, 0);
+            });
+            galleryGrid.appendChild(item);
+
+            // 将系列图片存入扁平数组（附带系列索引）
+            series.photos.forEach((photo, photoIndex) => {
+                allPhotosFlat.push({
+                    url: photo,
+                    seriesIndex: seriesIndex,
+                    photoIndex: photoIndex,
+                    seriesName: series.name
+                });
+            });
+        });
+
+        // ========== 灯箱逻辑 ==========
+        const lightbox = document.getElementById('lightbox');
+        const lightboxImg = document.getElementById('lightboxImg');
+        const lightboxCounter = document.getElementById('lightboxCounter');
+        const closeBtn = document.getElementById('closeLightbox');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+
+        let currentFlatIndex = 0;
+
+        function openLightbox(seriesIndex, photoIndex) {
+            // 根据系列和照片索引找到扁平数组中的位置
+            const foundIndex = allPhotosFlat.findIndex(
+                item => item.seriesIndex === seriesIndex && item.photoIndex === photoIndex
+            );
+            if (foundIndex === -1) return;
+            currentFlatIndex = foundIndex;
+            showImage();
+            lightbox.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function showImage() {
+            const item = allPhotosFlat[currentFlatIndex];
+            lightboxImg.src = item.url;
+            lightboxImg.alt = item.seriesName;
+            lightboxCounter.textContent = `${currentFlatIndex + 1} / ${allPhotosFlat.length}`;
+        }
+
+        function closeLightbox() {
+            lightbox.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        function nextImage() {
+            if (allPhotosFlat.length === 0) return;
+            currentFlatIndex = (currentFlatIndex + 1) % allPhotosFlat.length;
+            showImage();
+        }
+
+        function prevImage() {
+            if (allPhotosFlat.length === 0) return;
+            currentFlatIndex = (currentFlatIndex - 1 + allPhotosFlat.length) % allPhotosFlat.length;
+            showImage();
+        }
+
+        closeBtn.addEventListener('click', closeLightbox);
+        nextBtn.addEventListener('click', nextImage);
+        prevBtn.addEventListener('click', prevImage);
+
+        // 键盘控制
+        document.addEventListener('keydown', (e) => {
+            if (!lightbox.classList.contains('active')) return;
+            if (e.key === 'Escape') closeLightbox();
+            if (e.key === 'ArrowRight') nextImage();
+            if (e.key === 'ArrowLeft') prevImage();
+        });
+
+        // 点击背景关闭（可选）
+        lightbox.addEventListener('click', (e) => {
+            if (e.target === lightbox) closeLightbox();
+        });
+
         // ========== 导航滚动效果 ==========
         const navbar = document.getElementById('navbar');
         window.addEventListener('scroll', () => {
@@ -563,6 +704,13 @@
         }, { threshold: 0.2 });
 
         fadeElements.forEach(el => observer.observe(el));
+        // 也观察后续动态添加的元素
+        const mutationObserver = new MutationObserver(() => {
+            document.querySelectorAll('.fade-in').forEach(el => {
+                if (!el.classList.contains('visible')) observer.observe(el);
+            });
+        });
+        mutationObserver.observe(galleryGrid, { childList: true });
     </script>
 </body>
 </html>
